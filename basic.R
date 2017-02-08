@@ -122,3 +122,34 @@ clean_data <- function(train,test)
   return(list("train"=df$train,"test"=df$test))
 }
 
+# code for predicting cutoff
+
+cutoff_data=data.frame(cutoff=0,TP=0,FP=0,FN=0,TN=0,P=0,N=0)
+cutoffs=seq(0,1,length=100)
+
+for (cutoff in cutoffs){
+  predicted=as.numeric(test$prob>cutoff)
+  
+  TP=sum(predicted==1 & test$Target==1)
+  FP=sum(predicted==1 & test$Target==0)
+  FN=sum(predicted==0 & test$Target==1)
+  TN=sum(predicted==0 & test$Target==0)
+  P=FN+TP
+  N=TN+FP
+  cutoff_data=rbind(cutoff_data,c(cutoff,TP,FP,FN,TN,P,N))
+}
+
+# removing the dummy data cotaining top row
+cutoff_data=cutoff_data[-1,]
+
+cutoff_data=cutoff_data %>%
+  mutate(KS=abs((TP/P)-(FP/N))) %>%
+  mutate(Accuracy=(TP+TN)/(P+N)) %>%
+  select(-P,-N)
+
+KS_cutoff=cutoff_data$cutoff[which(cutoff_data$KS==max(cutoff_data$KS))][1]
+
+table(y = test$Target,cutoff = as.numeric(test$prob>KS_cutoff))
+
+
+
